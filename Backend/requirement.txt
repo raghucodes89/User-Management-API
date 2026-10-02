@@ -1,0 +1,7 @@
+FastAPI
+Uvicorn
+PyMongo
+python-dotenv
+passlib[bcrypt]
+pydantic-settings
+python-jose[cryptography]
