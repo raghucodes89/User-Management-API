@@ -5,3 +5,9 @@ class UserCreate(BaseModel):
     email : EmailStr
     password : str
     role : str = "employee"
+
+
+class UserLogin(BaseModel):
+    email : str
+    password : str
+    
