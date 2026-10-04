@@ -10,4 +10,9 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email : str
     password : str
-    
+
+
+class UserUpdate(BaseModel):
+    name : str| None = None
+    email : EmailStr | None = None
+    role : str | None = None

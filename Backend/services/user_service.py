@@ -59,3 +59,31 @@ def get_user_by_id(user_id):
     user.pop("password", None)
 
     return user
+
+
+def update_user(user_id, data):
+    update_data = {
+        key : value 
+        for key, value in data.model_dump().items()
+    }
+
+    result = user_collection.update_one(
+        {"_id" : ObjectId(user_id)},
+        {"$set": update_data}
+    )
+
+    if result.matched_count == 0:
+        return None
+    
+    return get_user_by_id(user_id)   
+
+
+def delete_user(user_id):
+    result = user_collection.delete_one({
+        "_id": ObjectId(user_id)
+    })
+
+    if result.deleted_count == 0:
+        return False
+
+    return True    

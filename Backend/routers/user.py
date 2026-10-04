@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
-from schemas.user import UserCreate, UserLogin
-from services.user_service import (create_user, login_user as login_user_service, get_all_users, get_user_by_id)
+from schemas.user import UserCreate, UserLogin, UserUpdate
+from services.user_service import (create_user, login_user as login_user_service, get_all_users, get_user_by_id, update_user, delete_user)
 from fastapi.security import HTTPAuthorizationCredentials
 from utils.security import (get_current_user, security, require_admin, require_manager)
 
@@ -82,3 +82,41 @@ def get_user(
             detail = "user not found"
         )
     return user    
+
+
+@router.put("/{user_id}")
+def update_user_details(
+    user_id : str,
+    data : UserUpdate,
+    credentials : HTTPAuthorizationCredentials = Depends(security)
+):
+    current_user = get_current_user(credentials)
+    require_manager(current_user)
+
+    user = update_user(user_id, data)
+
+    if not user:
+        raise HTTPException(
+            status_code = 404,detail = "User not found"
+        )
+    return user    
+
+@router.delete("/{user_id}")
+def delete_user_details(
+    user_id : str,
+    credentials : HTTPAuthorizationCredentials = Depends(security)
+):
+    current_user = get_current_user(credentials)
+    require_admin(current_user)
+
+    deleted = delete_user(user_id)
+
+    if not deleted:
+        raise HTTPException(
+            status_code = 404,
+            detail = "User not found"
+        )
+    return {
+        "message" : "User deleted successfully"
+    }
+

@@ -3,6 +3,9 @@ from jose import jwt
 from datetime import datetime, timedelta
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from dotenv import load_dotenv
+import os
+
 
 pwd_context = CryptContext(
     schemes=["bcrypt"],
@@ -19,8 +22,10 @@ def verify_password(password: str, hashed_password: str):
 # |     "JWT FUNCTION CODE"    |
 #   ==========================
 
-SECRET_KEY = "your-secret-key"
+load_dotenv()
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
+
 
 def create_access_token(data : dict):
     to_encode = data.copy()
