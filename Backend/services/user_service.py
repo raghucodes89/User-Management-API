@@ -1,8 +1,19 @@
+from fastapi import HTTPException
 from database.database import user_collection
 from utils.security import hash_password, verify_password, create_access_token
 from bson import ObjectId
 
 def create_user(user):
+    existing_user = user_collection.find_one({
+        "email" : user.email
+    })
+
+    if existing_user :
+        raise HTTPException(
+            status_code=400,
+            detail = "Email already registered"
+        )
+
     new_user = {
         "name" : user.name,
         "email" : user.email,
@@ -48,6 +59,9 @@ def get_all_users():
 
 
 def get_user_by_id(user_id):
+    if not ObjectId.is_valid(user_id):
+        return None
+
     user = user_collection.find_one({
         "_id" : ObjectId(user_id)
     })

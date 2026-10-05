@@ -93,6 +93,12 @@ def update_user_details(
     current_user = get_current_user(credentials)
     require_manager(current_user)
 
+    if data.role is not None and current_user.get("role") != "admin":
+        raise HTTPException(
+            status_code = 403,
+            detail = "Only Admin Can Change User Role"
+        )
+
     user = update_user(user_id, data)
 
     if not user:
