@@ -1,19 +1,64 @@
 from fastapi import APIRouter, Depends, HTTPException
-from schemas.user import UserCreate, UserLogin, UserUpdate
-from services.user_service import (create_user, login_user as login_user_service, get_all_users, get_user_by_id, update_user, delete_user)
+from schemas.user import UserCreate, UserLogin, UserUpdate, ChangePassword, AdminChangePassword
+from services.user_service import (create_user, login_user as login_user_service, get_all_users, get_user_by_id, update_user, delete_user,change_password, admin_change_password)
 from fastapi.security import HTTPAuthorizationCredentials
 from utils.security import (get_current_user, security, require_admin, require_manager)
+import os 
+import shutil
+from uuid import uuid4
+from pathlib import Path
+from fastapi import File, Form, UploadFile, HTTPException
 
-
-
+UPLOAD_DIR = Path(__file__).resolve().parent.parent / "uploads"
+UPLOAD_DIR.mkdir(parents=True,exist_ok=True)
 
 router = APIRouter(prefix="/users", tags=["user"])
 
 
 @router.post("/")
-def register_user(user: UserCreate):
-    return create_user(user)
+async def register_user(
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    role: str = Form("employee"),
+    department_code: str = Form(...),
+    employee_number: str = Form(...),
+    profile_photo: UploadFile | None = File(None), 
+):
 
+    photo_path = None
+
+    if profile_photo and profile_photo.filename:
+        extension = Path(profile_photo.filename).suffix.lower()
+
+        if extension not in {".jpg", ".jpeg", ".png", ".webp"}:
+            raise HTTPException(
+                status_code=400,
+                detail="Only JPG, PNG, and WEBP images are allowed"
+            )
+
+        filename = f"{uuid4().hex}{extension}"
+        file_path = UPLOAD_DIR / filename
+
+        with file_path.open("wb") as buffer:
+            shutil.copyfileobj(profile_photo.file, buffer)
+            
+        photo_path = f"uploads/{filename}"
+
+    user = UserCreate(
+        name=name,
+        email=email,
+        password=password,
+        role=role,
+        department_code=department_code,
+        employee_number=employee_number
+    )
+
+    user_data = user.model_dump()
+    user_data["profile_photo"] = photo_path
+
+
+    return create_user(user_data)
 
 @router.post("/login")
 def login_user(user:UserLogin):
@@ -26,10 +71,80 @@ def get_my_profile(
 ):
     current_user = get_current_user(credentials)
 
+    user = get_user_by_id(current_user["user_id"])
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
     return {
-        "message" : "Authonticated successfully!",
-        "user": current_user
+        "message" : "Profile retrieved successfully!",
+        "user": user
     }
+
+
+@router.put("/change-password")
+def change_user_password(
+    data: ChangePassword,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    current_user = get_current_user(credentials)
+    try:
+        result = change_password(
+            str(current_user["user_id"]),
+            data.current_password,
+            data.new_password
+        )
+
+        if not result:
+            raise HTTPException(
+                status_code=404,
+                detail="User not found"
+            )
+
+        return {
+            "message": "Password changed successfully!"
+        }    
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )
+
+@router.put("/{user_id}/password")
+def admin_change_user_password(
+    user_id:str,
+    data:AdminChangePassword,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    current_user = get_current_user(credentials)
+
+    require_admin(current_user)
+
+    try:
+        result = admin_change_password(
+            user_id,
+            data.new_password
+        )
+        
+        if not result:
+            raise HTTPException(
+                status_code=404,
+                detail = "user not found"
+            )
+
+        return {
+            "message": "user password changed successfully"
+        }    
+
+    except ValueError as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error)
+        )    
 
 @router.get("/admin")
 def admin_only(
@@ -125,4 +240,3 @@ def delete_user_details(
     return {
         "message" : "User deleted successfully"
     }
-

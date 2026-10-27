@@ -5,7 +5,7 @@ from bson import ObjectId
 
 def create_user(user):
     existing_user = user_collection.find_one({
-        "email" : user.email
+        "email" : user["email"]
     })
 
     if existing_user :
@@ -13,12 +13,18 @@ def create_user(user):
             status_code=400,
             detail = "Email already registered"
         )
+    
+    individual_id = f"{user["department_code"]}-{user["employee_number"]}"
 
     new_user = {
-        "name" : user.name,
-        "email" : user.email,
-        "password" : hash_password(user.password),
-        "role" : user.role
+        "name": user["name"],
+        "email": user["email"],
+        "password": hash_password(user["password"]),
+        "role": user["role"],
+        "department_code": user["department_code"],
+        "employee_number": user["employee_number"],
+        "individual_id": individual_id,
+        "profile_photo": user.get("profile_photo")
     }
     result = user_collection.insert_one(new_user)
 
@@ -100,4 +106,39 @@ def delete_user(user_id):
     if result.deleted_count == 0:
         return False
 
-    return True    
+    return True  
+
+
+def change_password(user_id: str, current_password: str, new_password: str):
+    user = user_collection.find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        return None
+
+    if not verify_password(current_password,user["password"]):
+        raise ValueError("Current password is incorrect")
+
+
+    new_hashed_password  =  hash_password(new_password)
+
+    user_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"password": new_hashed_password}}
+    )
+
+    return True
+
+def admin_change_password(user_id: str, new_password: str):
+    user = user.collection.find_one({"_id": ObjectId(user_id)})
+
+    if not user:
+        return None
+
+    new_hashed_password = hash_password(new_password)
+
+    user_collection.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"password": new_hashed_password}}
+    )
+
+    return True

@@ -13,10 +13,11 @@ pwd_context = CryptContext(
 )
 
 def hash_password(password: str):
+    password = password[:72]
     return pwd_context.hash(password)
 
 def verify_password(password: str, hashed_password: str):
-    return pwd_context.verify(password, hashed_password)  
+    return pwd_context.verify(password[:72], hashed_password)  
 
 #   ==========================
 # |     "JWT FUNCTION CODE"    |
